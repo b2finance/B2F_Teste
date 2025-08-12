@@ -12,6 +12,7 @@ namespace B2F_Teste
                 Console.WriteLine("1, 2, 3 testando");
                 Console.WriteLine("1, 2, 3, 4 testando");
                 Console.WriteLine("1, 2, 3, 4, 5 testando");
+                Console.WriteLine("1, 2, 3, 4, 6 testando");
 
                 Console.WriteLine("Serviço iniciado");
                 Console.WriteLine("Serviço finalizado");
