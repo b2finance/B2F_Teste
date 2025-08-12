@@ -1,0 +1,53 @@
+name: Build and Deploy Worker Service
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restaurar dependências
+      run: dotnet restore
+
+    - name: Build projeto
+      run: dotnet publish -c Release -o ./publish
+
+    - name: Deploy para servidor
+      env:
+        CLIENTS: ${{ secrets.CLIENTS_LIST }}
+      run: |
+        $clients = ConvertFrom-Json '${{ secrets.CLIENTS_LIST }}'
+
+        foreach ($client in $clients) {
+          Write-Host "Deploy para $($client.host)"
+
+          $secPass = ConvertTo-SecureString $client.password -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential($client.user, $secPass)
+
+          $session = New-PSSession -ComputerName $client.host -Credential $cred -Authentication Negotiate
+
+          # Copiar arquivos .exe, .dll e .pdb
+          Get-ChildItem -Path ./publish -Include *.exe, *.dll, *.pdb -Recurse | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination "C:\Program Files (x86)\Serviço\b2finance [B2F_Teste]" -ToSession $session -Force
+          }
+
+          # Reiniciar o serviço
+          Invoke-Command -Session $session -ScriptBlock {
+            Stop-Service "B2F_Teste" -Force
+            Start-Service "B2F_Teste"
+          }
+
+          Remove-PSSession $session
+        }
