@@ -8,30 +8,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="DataContractJsonSerializerStrategy.cs" />
-	  <Compile Remove="SimpleJson.cs" />
+		<Compile Remove="DataContractJsonSerializerStrategy.cs" />
+		<Compile Remove="SimpleJson.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
 	</ItemGroup>
-
-	<PropertyGroup>
-		<NugetTools>$(PkgNuGet_CommandLine)\tools</NugetTools>
-		<SquirrelTools>$(Pkgsquirrel_windows)\tools</SquirrelTools>
-
-		<Version>1.0.1</Version>
-
-		<NuspecFile>$(SolutionDir)B2F_Teste\ReleaseSpec.nuspec</NuspecFile>
-	</PropertyGroup>
-
-	<Target Name="GenerateRelease" AfterTargets="AfterBuild" Condition="$(Configuration) == Release">
-		<XmlPeek XmlInputPath="$(NuspecFile)" Query="/package/metadata/id/text()">
-			<Output TaskParameter="Result" ItemName="ID" />
-		</XmlPeek>
-
-		<Exec Command="$(NugetTools)\NuGet.exe pack $(NuspecFile) -Version $(Version) -Properties Configuration=Release -OutputDirectory $(SolutionDir)Deployment\GeneratedNugets" />
-
-		<Exec Command="$(SquirrelTools)\Squirrel.exe --releasify $(SolutionDir)Deployment\GeneratedNugets\@(ID).$(Version).nupkg --releaseDir=$(SolutionDir)Deployment\Releases" />
-	</Target>
 </Project>
