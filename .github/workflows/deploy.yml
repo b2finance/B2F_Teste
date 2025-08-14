@@ -2,8 +2,9 @@ name: Build & Release Squirrel
 
 on:
   push:
-    tags:
-      - 'v*.*.*'       # dispara em tags do tipo v1.2.3
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
