@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace B2F_Teste
 {
     public class Worker : BackgroundService
@@ -20,5 +22,7 @@ namespace B2F_Teste
             }
         }
 
+        
     }
+
 }

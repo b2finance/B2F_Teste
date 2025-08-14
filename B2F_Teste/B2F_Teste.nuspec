@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>MyService</id>
+    <version>1.0.0</version>
+    <authors>SeuNome</authors>
+    <owners>SeuGitHubUser</owners>
+    <description>Descrição do Windows Service</description>
+    <repository type="git" url="https://github.com/SeuUser/SeuRepo.git" />
+  </metadata>
+</package>
