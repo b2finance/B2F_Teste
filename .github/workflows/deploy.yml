@@ -11,29 +11,35 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Ajustar ExecutionPolicy (somente para esta execução)
+        shell: pwsh
+        run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
       - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Publish Service
-        run: dotnet publish ./MyService/MyService.csproj \
-              -c Release -r win-x64 --self-contained false -o ./publish
+        run: >-
+          dotnet publish ./B2F_Teste/B2F_Teste.csproj -c Release -r win-x64 --self-contained false -o ./publish
 
       - name: Install Squirrel CLI
+        shell: pwsh
         run: choco install squirrel -y
 
       - name: Releasify
-        run: |
-          squirrel --releasify ./publish/MyService.exe \
-                  --releaseDir ./releases \
-                  --packagesDir ./publish
+        shell: pwsh
+        run: >-
+          squirrel --releasify ./publish/B2F_Teste.exe --releaseDir ./releases --packagesDir ./publish
 
       - name: Create GitHub Release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          files: ./releases/**
+            tag_name: ${{ github.ref_name }}
+            files: |
+              ./releases/**
 
-      - name: Upload Release Assets
+      - name: Upload RELEASES file
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -41,10 +47,17 @@ jobs:
           asset_name: RELEASES
           asset_content_type: application/octet-stream
 
-      - name: Upload .nupkg and Setup.exe
+      - name: Upload .nupkg
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem -Path ./releases -Filter *.nupkg | Select-Object -First 1
+          if (-not $pkg) { Write-Error 'Nenhum .nupkg encontrado.' }
+          echo "PKG_PATH=$($pkg.FullName)" >> $env:GITHUB_ENV
+      - name: Upload pacote nupkg
+        if: env.PKG_PATH != ''
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./releases/*.nupkg
-          asset_name: MyService.${{ github.ref_name }}.nupkg
+          asset_path: ${{ env.PKG_PATH }}
+          asset_name: B2F_Teste.${{ github.ref_name }}.nupkg
           asset_content_type: application/octet-stream
