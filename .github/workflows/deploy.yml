@@ -1,53 +1,54 @@
-name: Build and Deploy Worker Service
+name: Build & Release Squirrel
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*.*.*'       # dispara em tags do tipo v1.2.3
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout código
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '8.0.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Restaurar dependências
-      run: dotnet restore
+      - name: Publish Service
+        run: dotnet publish ./MyService/MyService.csproj \
+              -c Release -r win-x64 --self-contained false -o ./publish
 
-    - name: Build projeto
-      run: dotnet publish -c Release -o ./publish
+      - name: Install Squirrel CLI
+        run: choco install squirrel -y
 
-    - name: Deploy para servidor
-      env:
-        CLIENTS: ${{ secrets.CLIENTS_LIST }}
-      run: |
-        $clients = ConvertFrom-Json '${{ secrets.CLIENTS_LIST }}'
+      - name: Releasify
+        run: |
+          squirrel --releasify ./publish/MyService.exe \
+                  --releaseDir ./releases \
+                  --packagesDir ./publish
 
-        foreach ($client in $clients) {
-          Write-Host "Deploy para $($client.host)"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ./releases/**
 
-          $secPass = ConvertTo-SecureString $client.password -AsPlainText -Force
-          $cred = New-Object System.Management.Automation.PSCredential($client.user, $secPass)
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./releases/RELEASES
+          asset_name: RELEASES
+          asset_content_type: application/octet-stream
 
-          $session = New-PSSession -ComputerName $client.host -Credential $cred -Authentication Negotiate
-
-          # Copiar arquivos .exe, .dll e .pdb
-          Get-ChildItem -Path ./publish -Include *.exe, *.dll, *.pdb -Recurse | ForEach-Object {
-            Copy-Item -Path $_.FullName -Destination "C:\Program Files (x86)\Serviço\b2finance [B2F_Teste]" -ToSession $session -Force
-          }
-
-          # Reiniciar o serviço
-          Invoke-Command -Session $session -ScriptBlock {
-            Stop-Service "B2F_Teste" -Force
-            Start-Service "B2F_Teste"
-          }
-
-          Remove-PSSession $session
-        }
+      - name: Upload .nupkg and Setup.exe
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./releases/*.nupkg
+          asset_name: MyService.${{ github.ref_name }}.nupkg
+          asset_content_type: application/octet-stream
