@@ -6,13 +6,16 @@ on:
   pull_request:
     branches: [ "main" ]
 
+defaults:
+  run:
+    shell: powershell
+
 jobs:
   build:
     runs-on: self-hosted
 
     steps:
       - name: Ajustar ExecutionPolicy (somente para esta execução)
-        shell: pwsh
         run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
       - name: Checkout repo
@@ -23,11 +26,9 @@ jobs:
           dotnet publish ./B2F_Teste/B2F_Teste.csproj -c Release -r win-x64 --self-contained false -o ./publish
 
       - name: Install Squirrel CLI
-        shell: pwsh
         run: choco install squirrel -y
 
       - name: Releasify
-        shell: pwsh
         run: >-
           squirrel --releasify ./publish/B2F_Teste.exe --releaseDir ./releases --packagesDir ./publish
 
@@ -35,9 +36,9 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-            tag_name: ${{ github.ref_name }}
-            files: |
-              ./releases/**
+          tag_name: ${{ github.ref_name }}
+          files: |
+            ./releases/**
 
       - name: Upload RELEASES file
         uses: actions/upload-release-asset@v1
@@ -47,12 +48,12 @@ jobs:
           asset_name: RELEASES
           asset_content_type: application/octet-stream
 
-      - name: Upload .nupkg
-        shell: pwsh
+      - name: Localizar .nupkg
         run: |
           $pkg = Get-ChildItem -Path ./releases -Filter *.nupkg | Select-Object -First 1
           if (-not $pkg) { Write-Error 'Nenhum .nupkg encontrado.' }
           echo "PKG_PATH=$($pkg.FullName)" >> $env:GITHUB_ENV
+
       - name: Upload pacote nupkg
         if: env.PKG_PATH != ''
         uses: actions/upload-release-asset@v1
